@@ -15,5 +15,7 @@ thrds.append(threading.Thread(target=randConsumer,
                              args=(BM,) ) )
 thrds.append(threading.Thread(target=obligConsumer,
                              args=(BM,) ) )
+SPcidx, SPmpQ = BM.BMregister_mpQ()
+procs.append(mp.Process(name='SubprocessConsumer', target = subprocConsumer, args=(SPmpQ) ) )
 
 # <<< - end of inserted code

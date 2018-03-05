@@ -42,6 +42,7 @@ from __future__ import unicode_literals
 import sys, time, numpy as np, threading
 #from multiprocessing import Process, Queue
 import multiprocessing as mp
+import traceback
 
 # import relevant pieces from picodaqa
 from picodaqa.read_config import *
@@ -56,7 +57,6 @@ import picodaqa.mpHists
 import picodaqa.AnimatedInstruments # deprecated !!!
 
 
-
 # !!!!
 # import matplotlib.pyplot as plt
 # !!!! matplot can only be used if no other thread using it is active
@@ -65,7 +65,7 @@ import picodaqa.AnimatedInstruments # deprecated !!!
 #     scope settings defined in .json-File, see picoConfig
 # --------------------------------------------------------------
 
-def cleanup():
+def cleanup(verbose,BM,PSconf):
     if verbose: print('  ending  -> cleaning up ')
     BM.end()         # tell buffer manager that we're done
     time.sleep(2)    #     and wait for tasks to finish
@@ -76,8 +76,7 @@ def cleanup():
 #    sys.exit(0)
 
 
-if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
-
+def runDAQ():
   print('\n*==* script ' + sys.argv[0] + ' executing')
 
 # check for / read command line arguments
@@ -199,9 +198,11 @@ if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
     if ANAscript:
       try:
         print('    including user analysis from file ' + ANAscript )
-        exec( open(ANAscript).read() )
+        with open(ANAscript) as f:
+          exec(compile(f.read(), ANAscript, 'exec'))
       except:
-        print('     failed to read analysis script ' + ANAscript)
+        print("     failed to read analysis script " + ANAscript)
+        traceback.print_exc()
         exit(1)
 
 # <---
@@ -240,7 +241,7 @@ if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
         break
 
     print(sys.argv[0]+' preparing to end ...')
-    cleanup()
+    cleanup(verbose,BM,PSconf)
     for prc in procs:
       print('    terminating '+prc.name)
       prc.terminate()
@@ -253,7 +254,7 @@ if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
   except KeyboardInterrupt:
 # END: code to clean up
     print(sys.argv[0]+': keyboard interrupt - preparing to end ...')
-    cleanup()
+    cleanup(verbose,BM,PSconf)
     for prc in procs:
       print('    terminating '+prc.name)
       prc.terminate()
@@ -261,3 +262,8 @@ if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
     sys.exit()
   
   sys.exit()
+
+if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
+    runDAQ()
+
+
