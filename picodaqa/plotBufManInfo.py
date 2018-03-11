@@ -61,13 +61,22 @@ class plotBufManInfo(object):
        self.init()
 
     k = n%self.Npoints
-    RUNNING,TRun,Ntrig,Ttrig,Tlife,readrate,lifefrac,bufLevel = self.Q.get()
+    try: 
+      RUNNING,TRun,Ntrig,Ttrig,Tlife,readrate,lifefrac,bufLevel = \
+                 self.Q.get(True, 0.5)
+    except:
+      return self.line1, self.animtxt1, self.animtxt2  
+ 
     self.R[k] = readrate
       
     self.line1.set_ydata(np.concatenate( (self.R[k+1:], self.R[:k+1]) ))
+    if RUNNING:
+      txtStat=''
+    else:
+      txtStat='        PAUSED'
     self.animtxt1.set_text( \
-       'Time: %.1fs  Triggers: %i  Lifetime: %.1fs (%.1f%%)'\
-              %(TRun, Ntrig, Tlife, 100.*Tlife/TRun) )
+       'TRun: %.1fs  Triggers: %i  Lifetime: %.1fs (%.1f%%)'\
+        %(TRun, Ntrig, Tlife, 100.*Tlife/TRun) + txtStat)
     self.animtxt2.set_text( \
      'current rate: %.3gHz  life: %.1f%%  buffer: %.0f%%'\
           %(readrate, lifefrac, bufLevel) )

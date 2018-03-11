@@ -128,7 +128,9 @@ class PSconfig(object):
 
     if "mode" in confdict: 
       self.mode = confdict["mode"] # "VMeter" "test"
+# - end picoConf.__init__()
 
+  def init(self):
 # configuration parameters only known after initialisation
     # import libraries relevant to PS model
     exec('from picoscope import ps'+self.PSmodel)
@@ -143,7 +145,7 @@ class PSconfig(object):
     except:
       print("PSconfig: Error initialising device - exit")
       sys.exit(1)
-# - end picoConf.__init__()
+# - end picoConf.init()
 
   def setSamplingPars(self, dT, NSamples, CRanges):
     self.TSampling = dT    # sampling interval
@@ -163,7 +165,7 @@ class PSconfig(object):
       print("Found the following picoscope:")
       print(self.picoDevice.getAllUnitInfo())
 
-    prompt=6*' ' +'picoIni: '
+    prompt = 6*' ' + 'picoIni: '
 # configure oscilloscope
 # 1) Time Base
     TSampling, NSamples, maxSamples = \
@@ -227,14 +229,15 @@ class PSconfig(object):
   '''
     self.picoDevice.runBlock(pretrig=self.pretrig) #
     # wait for PicoScope to set up (~1ms)
-    time.sleep(0.001) # set-up time not to be counted as "life time"
+ #   time.sleep(0.0005) # set-up time not to be counted as "life time"
     ti=time.time()
     while not self.picoDevice.isReady():
       if not self.BM.ACTIVE: return
-      time.sleep(0.001)
+      time.sleep(0.0001)
     # waiting time for occurence of trigger is counted as life time
     ttrg=time.time()
-    tlife = ttrg - ti       # account life time
+    # account life time, w. appr. corr. for set-up time
+    tlife = ttrg - ti - 0.00062  
   # store raw data in global array 
     for i, C in enumerate(self.picoChannels):
       self.picoDevice.getDataRaw(C, self.NSamples, data=self.rawBuf[i])

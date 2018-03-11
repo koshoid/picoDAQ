@@ -20,7 +20,7 @@
 # Import version info
 from ._version_info import *
 # and set version 
-_version_suffix = 'rc'  # for suffixes such as 'rc' or 'beta' or 'alpha'
+_version_suffix = ''  # for suffixes such as 'rc' or 'beta' or 'alpha'
 __version__ = _version_info._get_version_string()
 __version__ += _version_suffix
 
@@ -32,5 +32,5 @@ from .mpVMeter import *
 from .mpBDisplay import *
 from .mpLogWin import *
 from .mpHists import *
-from .mpBufManInfo import *
+from .mpBufManCntrl import *
 

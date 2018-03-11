@@ -61,19 +61,45 @@ import picodaqa.AnimatedInstruments # deprecated !!!
 #     scope settings defined in .json-File, see picoConfig
 # --------------------------------------------------------------
 
-def cleanup(verbose,BM,PSconf):
-    if verbose: print('  ending  -> cleaning up ')
-    BM.end()         # tell buffer manager that we're done
-    time.sleep(2)    #     and wait for tasks to finish
-    PSconf.picoDevice.stop()
-    PSconf.picoDevice.close()
-    time.sleep(1)
-#    if verbose>0: print('                      -> exit')
-#    sys.exit(0)
+
+# some helper functions 
+kbdtxt = ''
+def kbdin():
+  ''' 
+    read keyboard input, run as backround-thread to aviod blocking
+  '''
+    # 1st, remove pyhton 2 vs. python 3 incompatibility for keyboard input
+  if sys.version_info[:2] <=(2,7):
+    get_input = raw_input
+  else: 
+    get_input = input
+  # keyboard input as thread
+  global kbdtxt
+  while True:
+    kbdtxt = get_input(30*' '+'type -> E(nd), P(ause), S(top) or R(esume) + <ret> ')
+
+def closeDevice():
+  '''
+    Close down hardwre device at end of run
+  '''
+  if verbose: print('  closing connection to device')
+  PSconf.picoDevice.stop()
+  PSconf.picoDevice.close()
+  time.sleep(1)
+
+def stop_processes(proclst):
+  '''
+    Close Device at end of run
+  '''
+  for p in proclst: # stop all sub-processes
+    print('    terminating '+p.name)
+    p.terminate()
+  time.sleep(2)
 
 
-def runDAQ():
-  print('\n*==* script ' + sys.argv[0] + ' executing')
+if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
+
+  print('\n*==* script ' + sys.argv[0] + ' running \n')
 
 # check for / read command line arguments
   # read DAQ configuration file
@@ -114,8 +140,6 @@ def runDAQ():
     verbose = DAQconfdict["verbose"]
   else:
     verbose = 1   # print (detailed) info if >0 
-
-
     
   # read scope configuration file
   print('    Device configuration from file ' + DeviceFile)
@@ -123,7 +147,7 @@ def runDAQ():
     with open(DeviceFile) as f:
       PSconfdict=yaml.load(f)
   except:
-    print('     failed to ofread scope configuration file ' + DeviceFile)
+    print('     failed to read scope configuration file ' + DeviceFile)
     exit(1)
 
   # read Buffer Manager configuration file
@@ -139,6 +163,7 @@ def runDAQ():
 
 # configure and initialize PicoScope
   PSconf=picodaqa.picoConfig.PSconfig(PSconfdict)
+  PSconf.init()
   # copy some of the important configuration variables
   NChannels = PSconf.NChannels # number of channels in use
   TSampling = PSconf.TSampling # sampling interval
@@ -163,103 +188,94 @@ def runDAQ():
     modules = [modules]
 #
 
-# --- infinite LOOP
-  try:
-    thrds = []
-    procs =[]
+# set up all sub-processes and threads
+  thrds = []
+  procs =[]
     
-    if ('osci' in modules) or ('VMeter' in modules) or\
-       ('RMeter' in modules) or ('BufInfo' in modules):
-      # print('calling AnimatedInstruments')
-      thrds.append(threading.Thread(target=picodaqa.animInstruments,
+  if ('osci' in modules) or ('VMeter' in modules) or\
+     ('RMeter' in modules) or ('BufInfo' in modules):
+    # print('calling AnimatedInstruments')
+    thrds.append(threading.Thread(target=picodaqa.animInstruments,
                                            args=(modules, PSconf, BM) ) )
 
 # modules to be run as subprocesses
 #                  these use multiprocessing.Queue for data transfer
   # rate display
-    if 'mpRMeter' in modules:
-      RMcidx, RMmpQ = BM.BMregister_mpQ()
-      procs.append(mp.Process(name='RMeter', target = picodaqa.mpRMeter, 
-                args=(RMmpQ, 75., 2500., 'trigger rate history') ) )
-#                         maxRate interval name
+  if 'mpRMeter' in modules:
+    RMcidx, RMmpQ = BM.BMregister_mpQ()
+    procs.append(mp.Process(name='RMeter', target = picodaqa.mpRMeter, 
+              args=(RMmpQ, 75., 2500., 'trigger rate history') ) )
+#                       maxRate interval name
   # Voltmeter display
-    if 'mpVMeter' in modules:
-      VMcidx, VMmpQ = BM.BMregister_mpQ()
-      procs.append(mp.Process(name='VMeter', target = picodaqa.mpVMeter, 
-                args=(VMmpQ, PSconf, 500., 'effective Voltage') ) )
-#                           config interval name
+  if 'mpVMeter' in modules:
+    VMcidx, VMmpQ = BM.BMregister_mpQ()
+    procs.append(mp.Process(name='VMeter', target = picodaqa.mpVMeter, 
+              args=(VMmpQ, PSconf, 500., 'effective Voltage') ) )
+#                         config interval name
 
 # ---> put your own code here 
 
-    if ANAscript:
-      try:
-        print('    including user analysis from file ' + ANAscript )
-        with open(ANAscript) as f:
-          exec(compile(f.read(), ANAscript, 'exec'))
-      except:
-        print("     failed to read analysis script " + ANAscript)
-        traceback.print_exc()
-        exit(1)
+  if ANAscript:
+    try:
+      print('    including user analysis from file ' + ANAscript )
+      exec( open(ANAscript).read() )
+    except:
+      print('     failed to read analysis script ' + ANAscript)
+      exit(1)
 
 # <---
 
-    if len(procs)==0 and len(thrds)==0 :
-      print ('!!! nothing to do - running BM only')
+  if len(procs)==0 and len(thrds)==0 :
+    print ('!!! nothing to do - running BM only')
 # start all background processes   
-    for prc in procs:
-      prc.deamon = True
-      prc.start()
-      print(' -> starting process ', prc.name, ' PID=', prc.pid)
-    time.sleep(1.)
+  for prc in procs:
+    prc.deamon = True
+    prc.start()
+    print(' -> starting process ', prc.name, ' PID=', prc.pid)
+  time.sleep(1.)
 # start threads
-    for thrd in thrds:
-      thrd.daemon = True
-      thrd.start()
+  for thrd in thrds:
+    thrd.daemon = True
+    thrd.start()
+
 # start run
-#    BM.setLogQ(logQ) # redirect output to logging Queue
-    BM.run() 
+  BM.run() 
 
-# ---- run until key pressed
-    # fist, remove pyhton 2 vs. python 3 incompatibility
-    if sys.version_info[:2] <=(2,7):
-      get_input = raw_input
-    else: 
-      get_input = input
+# set up a thread to read from keyboad without blocking
+  kbd_thrd=threading.Thread(target=kbdin)
+  kbd_thrd.daemon = True
+  kbd_thrd.start()
 
-# ->> wait here until key pressed <<- 
-    while True:
-      A=get_input(40*' '+'type -> E(nd), P(ause) or R(esume) + <ret> ')
-      if A=='P':
-        BM.pause()
-      elif A=='R':
-        BM.resume()
-      elif A=='E': 
-        break
+# --- LOOP
+  try:
+# ->> wait for keyboard input or until BM ends <<- 
+    while BM.ACTIVE.value:
+      if len(kbdtxt):
+        cmd = kbdtxt
+        kbdtxt=''
+        if cmd == 'P':
+          BM.pause()
+        elif cmd == 'R':
+          BM.resume()
+        elif cmd == 'S': 
+          BM.stop()
+        elif cmd =='E': 
+          BM.end()
+          continue  # while
+      time.sleep(0.5)
 
-    print(sys.argv[0]+' preparing to end ...')
-    cleanup(verbose,BM,PSconf)
-    for prc in procs:
-      print('    terminating '+prc.name)
-      prc.terminate()
-    time.sleep(2)
+    print(sys.argv[0] + ' End command recieved ...')
 
-# ---> end-of-run code could go here
+# ---> user-specific end-of-run code could go here
     print('Data Acquisition ended normally')
 # <---
 
   except KeyboardInterrupt:
+    print(sys.argv[0]+': keyboard interrupt - closing down ...')
+    BM.end()  # shut down BufferManager
+
+  finally:
 # END: code to clean up
-    print(sys.argv[0]+': keyboard interrupt - preparing to end ...')
-    cleanup(verbose,BM,PSconf)
-    for prc in procs:
-      print('    terminating '+prc.name)
-      prc.terminate()
-    time.sleep(2)
-    sys.exit()
-  
-  sys.exit()
-
-if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
-    runDAQ()
-
-
+    closeDevice() # close down device
+    stop_processes(procs) # termnate background processes
+    print('finished cleaning up \n')
