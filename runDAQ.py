@@ -40,7 +40,7 @@ from __future__ import absolute_import
 import sys, time, yaml, numpy as np, threading
 #from multiprocessing import Process, Queue
 import multiprocessing as mp
-import traceback
+import traceback as trace
 
 # import relevant pieces from picodaqa
 import picodaqa.picoConfig
@@ -96,7 +96,6 @@ def stop_processes(proclst):
 
 
 if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
-
   print('\n*==* script ' + sys.argv[0] + ' running \n')
 
 # check for / read command line arguments
@@ -160,8 +159,13 @@ if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
   print(' -> initializing PicoScope')
 
 # configure and initialize PicoScope
-  PSconf=picodaqa.picoConfig.PSconfig(PSconfdict)
-  PSconf.init()
+  try:
+    PSconf=picodaqa.picoConfig.PSconfig(PSconfdict)
+    PSconf.init()
+  except:
+    trace.print_exc()
+    exit(1)
+
   # copy some of the important configuration variables
   NChannels = PSconf.NChannels # number of channels in use
   TSampling = PSconf.TSampling # sampling interval
@@ -212,6 +216,7 @@ if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
       exec( open(ANAscript).read() )
     except:
       print('     failed to read analysis script ' + ANAscript)
+      trace.print_exc()
       exit(1)
 
 # <---
@@ -270,3 +275,4 @@ if __name__ == "__main__": # - - - - - - - - - - - - - - - - - - - - - -
     closeDevice() # close down device
     stop_processes(procs) # termnate background processes
     print('finished cleaning up \n')
+

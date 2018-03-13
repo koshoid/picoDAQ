@@ -31,7 +31,7 @@ def obligConsumer(BM):
       print('*==* obligConsumer: event Nr %i, %i events seen'%(evNr,evcnt))
 
 #    introduce random wait time to mimick processing activity
-    time.sleep(-0.25 * np.log(np.random.uniform(0.,1.)) )
+#    time.sleep(-0.25 * np.log(np.random.uniform(0.,1.)) )
   return
 #-end def obligComsumer
 
@@ -54,7 +54,7 @@ def randConsumer(BM):
       evcnt+=1
       print('*==* randConsumer: event Nr %i, %i events seen'%(evNr,evcnt))
 # introduce random wait time to mimick processing activity
-    time.sleep(np.random.randint(100,1000)/1000.)
+#    time.sleep(np.random.randint(100,1000)/1000.)
 # - end def randConsumer()
   return
 #
