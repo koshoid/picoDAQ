@@ -14,10 +14,11 @@ from examples.pulseFilter import *
 
 #thrds.append(threading.Thread(target=randConsumer,                             args=(BM,) ) )
 #thrds.append(threading.Thread(target=obligConsumer,                             args=(BM,) ) )
-thrds.append(threading.Thread(target=pulseFilter, args=(BM,PSconf), kwargs={'fileout':True}))
+cId_pf = BM.BMregister()
+procs.append(mp.Process(target=pulseFilter, args=(BM,PSconf, cId_pf), kwargs={'fileout':True}))
 
-ProcessPulseidx, ProcessPulsempQ = BM.BMregister_mpQ()
-procs.append(mp.Process(name='ProcessPulse', target = mpProcessPulse,args=(ProcessPulsempQ, PSconf)))
+cId_pp = BM.BMregister()
+procs.append(mp.Process(name='ProcessPulse', target = mpProcessPulse,args=(BM, PSconf, cId_pp)))
 
 # get Client Id from BufferManager (must be done in mother process)
 cId_o = BM.BMregister() 

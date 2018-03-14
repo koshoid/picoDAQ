@@ -4,7 +4,7 @@ from __future__ import division, absolute_import, print_function, unicode_litera
 
 import sys, numpy as np, time, traceback as trace
 
-def mpProcessPulse(Q, conf):
+def mpProcessPulse(BM, conf, cId):
     '''effective Voltage of data passed via multiprocessing.Queue
         Args:
             conf: picoConfig object
@@ -17,9 +17,15 @@ def mpProcessPulse(Q, conf):
 
     np.set_printoptions(threshold=20000,linewidth=5)
     cnt = 0
-    try:
-        while True:
-            evNr, evTime, evData = Q.get()
+    if not BM.ACTIVE.value: sys.exit(1)
+# register with Buffer Manager
+    mode = 0    # obligatory consumer, data in evdata transferred as pointer
+    evcnt=0
+    while BM.ACTIVE.value:
+        e = BM.getEvent(cId, mode=mode)
+        if e != None:
+            evNr, evtime, evData = e
+            evcnt+=1
             cnt+=1
 #            filename="eventlog_" + time.strftime("%Y-%m-%dT%H-%M-%S",time.gmtime()) + "-" + str(evNr)
 #            logfile=open(filename, "w")
@@ -37,6 +43,7 @@ def mpProcessPulse(Q, conf):
 #                s=str(evData) + "\n"
 #                pulsefile.write(s)
 #                pulsefile.close()
+                
             else:
                 print("Rejecting pulse in coincidence filter with A: " + str(evData[0,250]) + " B: " + str(evData[1,250]) + " C: " + str(evData[2,250]))
 #                filename="rejectlog_" + time.strftime("%Y-%m-%dT%H-%M-%S",time.gmtime()) + "-" + str(evNr)
@@ -46,7 +53,5 @@ def mpProcessPulse(Q, conf):
 #                s=str(evData) + "\n"
 #                rejectfile.write(s)
 #                rejectfile.close()
-    except:
-        print('*==* mpProcessPulse: termination signal recieved')
-        trace.print_exc()
-        sys.exit()
+    print("ProcessPulse exiting")
+    sys.exit()
