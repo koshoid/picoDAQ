@@ -19,6 +19,13 @@ thrds.append(threading.Thread(target=pulseFilter, args=(BM,PSconf), kwargs={'fil
 ProcessPulseidx, ProcessPulsempQ = BM.BMregister_mpQ()
 procs.append(mp.Process(name='ProcessPulse', target = mpProcessPulse,args=(ProcessPulsempQ, PSconf)))
 
-
+# get Client Id from BufferManager (must be done in mother process)
+cId_o = BM.BMregister() 
+procs.append(mp.Process(target=randConsumer,
+                             args=(BM, cId_o) ) )
+# client Id for random consumer
+cId_r = BM.BMregister() 
+procs.append(mp.Process(target=obligConsumer,
+                             args=(BM, cId_r) ) )
 
 # <<< - end of inserted code
