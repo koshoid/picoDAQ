@@ -57,7 +57,7 @@ def setRefPulse(dT, taur=20E-9, tauon=12E-9, tauf=128E-9, pheight=-0.030):
 
 def pulseFilterd(BM, conf, cId, 
                 filtRateQ = None, histQ = None, VSigQ = None, 
-                fileout = None, verbose=1):
+                fileout = None, verbose=1, PulseQ = None):
   '''
     Find a pulse similar to a template pulse by cross-correlatation
 
@@ -116,6 +116,9 @@ def pulseFilterd(BM, conf, cId,
   ph = -0.035 # pulse height (V) # for Kamiokanne
 #
   refp = setRefPulse(dT, taur, tauon, tauf, ph)
+  if PulseQ is not None and PulseQ.empty():
+    print("pulseFilter: Writing refp to PulseDisplayQ")
+    PulseQ.put( (3, refp) )
 #
   lref = len(refp)
   refpm = refp - refp.mean() # mean subtracted
@@ -173,7 +176,7 @@ def pulseFilterd(BM, conf, cId,
 # 1. validate trigger pulse
     if iCtrg >= 0:  
       offset = max(0, idT0 - int(taur/dT) - idTprec)
-      cort = np.correlate(evData[iCtrg, offset:idT0+idTprec+lref], 
+      cort = np.correlate(evData[iCtrg, 0:idT0+idTprec+lref], 
              refp, mode='valid')
 #      print("pulseFilter: Trigger pulse event %i after correlation: cort: "%(evNr))
 #      print(np.array_str(cort))
@@ -184,7 +187,10 @@ def pulseFilterd(BM, conf, cId,
       if idtr > idT0 + (taur + tauon)/dT + idTprec:
         hnTrSigs.append(0.)
         print("pulseFilter: Determined noise signal %i: "%(evNr))
-#        print(np.array_str(evData[iCtrg, offset:idT0+idTprec+lref]))
+        print(np.array_str(evData[iCtrg, 0:idT0+idTprec+lref]))
+        if PulseQ is not None and PulseQ.empty():
+          print("pulseFilter: Writing data to PulseDisplayQ")
+          PulseQ.put( (0, evData[iCtrg, 0:idT0+idTprec+lref]) )
         continue #- while # no pulse near trigger, skip rest of event analysis
     # check pulse shape by requesting match with time-averaged pulse
       evdt = evData[iCtrg, idtr:idtr+lref]
@@ -201,10 +207,16 @@ def pulseFilterd(BM, conf, cId,
         tevt = T  # time of event
         print("pulseFilter: Determined valid signal %i: "%(evNr))
 #        print(np.array_str(evdt))
+        if PulseQ is not None and PulseQ.empty():
+          print("pulseFilter: Writing data to PulseDisplayQ")
+          PulseQ.put( (2, evData[iCtrg, idtr:idtr+lref]) )
       else:   # no valid trigger
         hnTrSigs.append( max(abs(evdt)) )
         print("pulseFilter: Determined invalid signal %i: "%(evNr))
 #        print(np.array_str(evdt))
+        if PulseQ is not None and PulseQ.empty():
+          print("pulseFilter: Writing data to PulseDisplayQ")
+          PulseQ.put( (1, evData[iCtrg, idtr:idtr+lref]) )
         continue #- while # skip rest of event analysis
     NSig[iCtrg] +=1
 

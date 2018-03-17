@@ -12,6 +12,7 @@ from picodaqa.mpHists import mpHists
 
 # import analysis code as library
 from examples.pulseFilterd import *
+from mpPulseDisplay import *
 
 # pulse shape analysis
 filtRateQ = None
@@ -43,9 +44,13 @@ procs.append(mp.Process(name = 'ChannelSignals',
           args=(VSigQ, PSconf, mode, size, 'Panel Signals') ) )
 #               mp.Queue Chan.Conf.           name          
 
+PulseQ = mp.Queue(1)
+procs.append(mp.Process(name = 'PulseDisplay', target = mpPulseDisplay, args=(PulseQ,PSconf)))
+
+
 
 # run pulse analysis
-cId = BM.BMregister() # get a Buffer Manager Client Id
+cId_pf = BM.BMregister() # get a Buffer Manager Client Id
 
   # pulse analysis as thread
 #thrds.append(threading.Thread(target=pulseFilter,
@@ -54,7 +59,7 @@ cId = BM.BMregister() # get a Buffer Manager Client Id
 
   # pulse analysis as sub-process
 procs.append(mp.Process(name='pulseFilterd', target=pulseFilterd, 
-       args = ( BM, PSconf, cId, filtRateQ, histQ, VSigQ, True, 2) ) )
+       args = ( BM, PSconf, cId_pf, filtRateQ, histQ, VSigQ, True, 2, PulseQ) ) )
 #                      BMclientId  RMeterQ  histQ  fileout verbose    
 
 #   could also run this in main thread
