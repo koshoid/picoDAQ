@@ -15,6 +15,8 @@ def mpProcessPulse(BM, conf, cId):
     # random consumer of Buffer Manager, receives an event copy 
     # via a Queue from package mutiprocessing
 
+    prlog=BM.prlog
+    verbose=2
     np.set_printoptions(threshold=20000,linewidth=5)
     cnt = 0
     if not BM.ACTIVE.value: sys.exit(1)
@@ -35,7 +37,7 @@ def mpProcessPulse(BM, conf, cId):
 #            logfile.write(s)
 #            logfile.close()
             if ((evData[1,251] < -0.04) and (evData[2,251] > -0.01)):
-                print("Accepting pulse in coincidence filter with A: " + str(evData[0,251]) + " B: " + str(evData[1,251]) + " C: " + str(evData[2,251]))
+                print("mpProcessPulse: Accepting pulse %i in coincidence filter with A: %.3f B: %.3f C: %.3f"%(evNr, evData[0,251], evData[1,251], evData[2,251]))
 #                filename="pulselog_" + time.strftime("%Y-%m-%dT%H-%M-%S",time.gmtime()) + "-" + str(evNr)
 #                pulsefile=open(filename, "w")
 #                s="#cnt: " + str(cnt) + "\n#evNr: " +str(evNr) + "\n#evTime: " + str(evTime) + "\n"
@@ -45,7 +47,7 @@ def mpProcessPulse(BM, conf, cId):
 #                pulsefile.close()
                 
             else:
-                print("Rejecting pulse in coincidence filter with A: " + str(evData[0,250]) + " B: " + str(evData[1,250]) + " C: " + str(evData[2,250]))
+                print("mpProcessPulse: Rejecting pulse %i in coincidence filter with A: %.3f B: %.3f C: %.3f"%(evNr, evData[0,251], evData[1,251], evData[2,251]))
 #                filename="rejectlog_" + time.strftime("%Y-%m-%dT%H-%M-%S",time.gmtime()) + "-" + str(evNr)
 #                rejectfile=open(filename, "w")
 #                s="#cnt: " + str(cnt) + "\n#evNr: " +str(evNr) + "\n#evTime: " + str(evTime) + "\n"

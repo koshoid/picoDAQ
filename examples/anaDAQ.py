@@ -11,7 +11,7 @@ from picodaqa.mpBDisplay import mpBDisplay
 from picodaqa.mpHists import mpHists
 
 # import analysis code as library
-from pulseFilter import *
+from examples.pulseFilterd import *
 
 # pulse shape analysis
 filtRateQ = None
@@ -53,8 +53,8 @@ cId = BM.BMregister() # get a Buffer Manager Client Id
 #                      BMclientId  RMeterQ  histQ  fileout verbose    
 
   # pulse analysis as sub-process
-procs.append(mp.Process(name='pulseFilter', target=pulseFilter, 
-       args = ( BM, PSconf, cId, filtRateQ, histQ, VSigQ, True, 1) ) )
+procs.append(mp.Process(name='pulseFilterd', target=pulseFilterd, 
+       args = ( BM, PSconf, cId, filtRateQ, histQ, VSigQ, True, 2) ) )
 #                      BMclientId  RMeterQ  histQ  fileout verbose    
 
 #   could also run this in main thread

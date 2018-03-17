@@ -175,17 +175,16 @@ def pulseFilterd(BM, conf, cId,
       offset = max(0, idT0 - int(taur/dT) - idTprec)
       cort = np.correlate(evData[iCtrg, offset:idT0+idTprec+lref], 
              refp, mode='valid')
-      prlog("cort: ")
-      prlog(np.array_str(cort))
-      prlog("cort<pthr=pthr: ")
+#      print("pulseFilter: Trigger pulse event %i after correlation: cort: "%(evNr))
+#      print(np.array_str(cort))
+#      print("pulseFilter: Setting all values below threshold to threshold %.3f cort<pthr=pthr: "%(pthr))
       cort[cort<pthr] = pthr # set all values below threshold to threshold
-      prlog(np.array_str(cort))
+#      print(np.array_str(cort))
       idtr = np.argmax(cort) + offset # index of 1st maximum
-      prlog("idtr: %i"%(idtr))
       if idtr > idT0 + (taur + tauon)/dT + idTprec:
         hnTrSigs.append(0.)
-        prlog("Determined noise signal: ")
-        prlog(np.array_str(evData[iCtrg, offset:idT0+idTprec+lref]))
+        print("pulseFilter: Determined noise signal %i: "%(evNr))
+#        print(np.array_str(evData[iCtrg, offset:idT0+idTprec+lref]))
         continue #- while # no pulse near trigger, skip rest of event analysis
     # check pulse shape by requesting match with time-averaged pulse
       evdt = evData[iCtrg, idtr:idtr+lref]
@@ -200,16 +199,17 @@ def pulseFilterd(BM, conf, cId,
         T = idtr*dT*1E6      # signal time in musec
         TSig[iCtrg][0] = T 
         tevt = T  # time of event
-        prlog("Determined valid signal: ")
-        prlog(np.array_str(evdt))
+        print("pulseFilter: Determined valid signal %i: "%(evNr))
+#        print(np.array_str(evdt))
       else:   # no valid trigger
         hnTrSigs.append( max(abs(evdt)) )
-        prlog("Determined invalid signal: ")
-        prlog(np.array_str(evdt))
+        print("pulseFilter: Determined invalid signal %i: "%(evNr))
+#        print(np.array_str(evdt))
         continue #- while # skip rest of event analysis
     NSig[iCtrg] +=1
 
 #2. find coincidences
+    print("pulseFilter: Checking for coincidence")
     Ncoinc = 1
     for iC in range(NChan):
       if iC != iCtrg:
@@ -220,6 +220,8 @@ def pulseFilterd(BM, conf, cId,
         cor[cor<pthr] = pthr # set all values below threshold to threshold
         id = np.argmax(cor)+offset # find index of (1st) maximum 
         if id > idT0 + (taur + tauon)/dT + idTprec:
+          print("pulseFilter: no pulse near trigger, skip:")
+#          print(np.array_str(evData[iC, offset:idT0+idTprec+lref]))
           continue #- for # no pulse near trigger, skip
         evd = evData[iC, id:id+lref]
         evdm = evd - evd.mean()  # center signal candidate around zero
@@ -227,6 +229,7 @@ def pulseFilterd(BM, conf, cId,
         if cc > pthrm:
           NSig[iC] +=1
           Ncoinc += 1 # valid, coincident pulse
+          prlog("pulseFilter: Coincidence in channel %i"%(iC))
           V = max(abs(evd))
           VSig[iC][0] = V         # signal voltage  
           hVSigs.append(V)         
@@ -238,7 +241,9 @@ def pulseFilterd(BM, conf, cId,
     if (NChan == 1 and validated) or (NChan > 1 and Ncoinc >=2):
       accepted = True
       Nacc += 1
+      print("pulseFilter: Accepted event")
     else:
+      print("pulseFilter: Did not accept event")
       continue #- while 
 
 # fix event time:
@@ -250,6 +255,7 @@ def pulseFilterd(BM, conf, cId,
 
 # 3. find subsequent pulses in accepted events
     offset = idtr + lref # search after trigger pulse
+    print("pulseFilter: Looking for double pulse")
     for iC in range(NChan):
       cor = np.correlate(evData[iC, offset:], refp, mode='valid')
       cor[cor<pthr] = pthr # set all values below threshold to threshold
