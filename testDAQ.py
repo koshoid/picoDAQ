@@ -10,12 +10,12 @@
 # import analysis code as library
 from exampleConsumers import *
 from mpProcessPulse import *
-from examples.pulseFilter import *
+from examples.pulseFilterd import *
 
 #thrds.append(threading.Thread(target=randConsumer,                             args=(BM,) ) )
 #thrds.append(threading.Thread(target=obligConsumer,                             args=(BM,) ) )
 cId_pf = BM.BMregister()
-procs.append(mp.Process(target=pulseFilter, args=(BM,PSconf, cId_pf), kwargs={'fileout':True}))
+procs.append(mp.Process(target=pulseFilterd, args=(BM,PSconf, cId_pf), kwargs={'fileout':True, 'verbose':2}))
 
 cId_pp = BM.BMregister()
 procs.append(mp.Process(name='ProcessPulse', target = mpProcessPulse,args=(BM, PSconf, cId_pp)))
