@@ -184,6 +184,7 @@ def pulseFilterd(BM, conf, cId,
       cort[cort<pthr] = pthr # set all values below threshold to threshold
 #      print(np.array_str(cort))
       idtr = np.argmax(cort) + offset # index of 1st maximum
+      print("idtr: %i offset: %i"%(idtr,offset))
       if idtr > idT0 + (taur + tauon)/dT + idTprec:
         hnTrSigs.append(0.)
         print("pulseFilter: Determined noise signal %i: "%(evNr))
