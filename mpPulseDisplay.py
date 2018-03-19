@@ -1,8 +1,8 @@
+import sys
 import numpy as np
-
 import matplotlib.pyplot as plt
-
 import traceback as trace
+from collections import deque
 
 def mpPulseDisplay(Q, conf):
     '''Oscilloscpe display of data passed via multiprocessing.Queue
@@ -11,10 +11,12 @@ def mpPulseDisplay(Q, conf):
         Q:    multiprocessing.Queue()   
     '''
     axes=[]
+    colors=[]
+    data=[]
     fig=plt.figure(1,figsize=(10.,10.))
-    axes.append(fig.add_subplot(4,1,1))
-    axes.append(fig.add_subplot(4,1,2))
-    axes.append(fig.add_subplot(4,1,3))
+    axes.append(fig.add_subplot(3,1,1))
+    axes.append(fig.add_subplot(3,1,2))
+    axes.append(fig.add_subplot(3,1,3))
 #    axes.append(fig.add_subplot(4,1,4))
     axes[0].set_xlabel("ns")
     axes[1].set_xlabel("ns")
@@ -35,7 +37,17 @@ def mpPulseDisplay(Q, conf):
     axes[1].set_ylim(-0.05,0.)
     axes[2].set_ylim(-0.05,0.)
 #    axes[3].set_ylim(-0.05,0.)
-    colors=['blue','red','green']
+#    colors=['blue','red','green']
+    colors.append(['#4e79a7','#6c8fb6','#89a6c4','#a7bcd3','#c4d2e2','#e2e9f0'])
+    colors.append(['#e15759','#e67375','#eb8f90','#f0abac','#f5c7c8','#fae3e3'])
+    colors.append(['#59a14f','#75b16c','#90c08a','#acd0a7','#c8e0c4','#e3efe2'])
+    data.append(deque([],6))
+    data.append(deque([],6))
+    data.append(deque([],6))
+
+
+
+
 #    axes[0].plot(ts,ts)
 #    axes[1].plot(ts,ts)
 #    axes[2].plot(ts,ts)
@@ -55,11 +67,16 @@ def mpPulseDisplay(Q, conf):
                     refdata=evData[:samples]
                 continue
             cnt+=1
-            axes[eventType].lines=[]
             if evData.size<samples:
-                axes[eventType].plot(ts,np.append(evData,np.zeros(samples-evData.size)),colors[eventType])
+                data[eventType].appendleft(np.append(evData,np.zeros(samples-evData.size)))
             else:
-                axes[eventType].plot(ts,evData[:samples],colors[eventType])
+                data[eventType].appendleft(evData[:samples])
+
+            axes[eventType].lines=[]
+
+            for d,c,z in zip(data[eventType],colors[eventType],range(6,1,-1)):
+                axes[eventType].plot(ts,d,c,zorder=z)
+            
             if refdata != []:
                 axes[eventType].plot(ts,refdata,'orange')
             plt.show(block=False)
