@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 # script runDAQ.py
 '''
@@ -34,8 +34,8 @@
   and an open cable to Channel A
 '''
 
-from __future__ import print_function, division, unicode_literals
-from __future__ import absolute_import
+from __future__ import print_function, division, unicode_literals, absolute_import
+from builtins import input
 
 import sys, time, yaml, numpy as np, threading
 #from multiprocessing import Process, Queue
@@ -66,15 +66,10 @@ def kbdin():
   ''' 
     read keyboard input, run as backround-thread to aviod blocking
   '''
-    # 1st, remove pyhton 2 vs. python 3 incompatibility for keyboard input
-  if sys.version_info[:2] <=(2,7):
-    get_input = raw_input
-  else: 
-    get_input = input
   # keyboard input as thread
   global kbdtxt
   while True:
-    kbdtxt = get_input(30*' '+'type -> E(nd), P(ause), S(top) or R(esume) + <ret> ')
+    kbdtxt = input(30*' '+'type -> E(nd), P(ause), S(top) or R(esume) + <ret> ')
 
 def closeDevice():
   '''
