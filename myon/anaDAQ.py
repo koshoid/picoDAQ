@@ -11,8 +11,8 @@ from picodaqa.mpBDisplay import mpBDisplay
 from picodaqa.mpHists import mpHists
 
 # import analysis code as library
-from myon.PulseProcessor import PulseProcessor
-from myon.mpPulseDisplay import *
+from myon import PulseProcessor
+from myon import mpPulseDisplay
 
 # pulse shape analysis
 filtRateQ = None
@@ -45,7 +45,7 @@ procs.append(mp.Process(name = 'ChannelSignals',
 #               mp.Queue Chan.Conf.           name          
 
 PulseQ = mp.Queue(1)
-procs.append(mp.Process(name = 'PulseDisplay', target = mpPulseDisplay, args=(PulseQ,PSconf)))
+procs.append(mp.Process(name = 'PulseDisplay', target = mpPulseDisplay.mpPulseDisplay, args=(PulseQ,PSconf)))
 
 
 
