@@ -1,16 +1,15 @@
 from __future__ import print_function, division, absolute_import, unicode_literals
 
-import sys
-import time, numpy as np
+import sys, time, numpy as np, math
 from scipy.signal import argrelmax
 from scipy.interpolate import interp1d
 
 
 class PulseProcessor:
 
-    def __init__(self, bufferManager, config, consumerId, filterRateQueue = None, histogramQueue = None,
-                 voltageSignalQueue = None, pulseDisplayQueue = None, consumerMode = 0, logPulses = False,
-                 verbosity = 1):
+    def __init__(self, bufferManager, config, consumerId, filterRateQueue=None, histogramQueue=None,
+                 voltageSignalQueue=None, pulseDisplayQueue=None, consumerMode=0, logPulses=False,
+                 verbosity=1):
         self.bufferManager = bufferManager
         self.config = config
         self.consumerId = consumerId
@@ -24,7 +23,8 @@ class PulseProcessor:
         self.logPulses = logPulses
         self.verbosity = verbosity
 
-    def generateTrapezoidPulse(self, timeScale, riseTime, onTime, fallTime, fallTime2 = 0, offTime = 0., riseTime2 = 0., mode = 0):
+    def generateTrapezoidPulse(self, timeScale, riseTime, onTime, fallTime, fallTime2=0, offTime=0., riseTime2=0.,
+                               mode=0):
         '''
           create a single or double trapezoidal plulse,
             normalised to pulse height one
@@ -54,11 +54,28 @@ class PulseProcessor:
             ti = ti.append(riseTime + onTime + fallTime + fallTime2 + offTime + riseTime2)
             ri = ri.append(0.)
 
-        trapezoidInterpolator = interp1d(ti, ri, kind = 'linear', copy = False, assume_sorted = True)
+        trapezoidInterpolator = interp1d(ti, ri, kind='linear', copy=False, assume_sorted=True)
 
         return trapezoidInterpolator(timeScale)
 
-    def generateReferencePulse(self, dT, tauRise = 20E-9, tauOn = 12E-9, tauFall = 128E-9, pulseHeight = -0.030):
+    def generateMyonicPulse(self, timeScale, riseTime, onTime, lifeTime):
+        """
+            create a single pulse that looks right
+        :param timeScale:
+        :param riseTime:
+        :param onTime:
+        :param fallTime:
+        :return:
+        """
+
+        ti = [0., riseTime, riseTime + onTime, riseTime + onTime + lifeTime, riseTime + onTime + 2 * lifeTime,
+              riseTime + onTime + 3 * lifeTime, riseTime + onTime + 4 * lifeTime, riseTime + onTime + 5 * lifeTime, riseTime + onTime + 6 * lifeTime]
+        ri = [0., 1., 1., math.exp(-1), math.exp(-2), math.exp(-3), math.exp(-4), math.exp(-5), math.exp(-6)]
+        myonicInterpolator = interp1d(ti,ri, kind='linear', copy=False, assume_sorted=True)
+
+        return myonicInterpolator(timeScale)
+
+    def generateReferencePulse(self, dT, tauRise=20E-9, tauOn=12E-9, tauFall=128E-9, pulseHeight=-0.030):
         '''
           Generates a reference pulse shape for convolution filter
           Args:
@@ -70,14 +87,15 @@ class PulseProcessor:
         pulseDuration = tauRise + tauOn + tauFall
         pulseDurationSamples = np.int32(pulseDuration / dT + 0.5) + 1
         timeScale = np.linspace(0, pulseDuration, pulseDurationSamples)
-        referencePulse = pulseHeight * self.generateTrapezoidPulse(timeScale, tauRise, tauOn, tauFall)
+        referencePulse = pulseHeight * self.generateMyonicPulse(timeScale, tauRise, tauOn, 0.3*tauFall)
 
         return referencePulse
 
-
     def displayPulse(self, id, pulse):
-        self.putQueue(self.pulseDisplayQueue, (id, pulse))
-
+        if self.putQueue(self.pulseDisplayQueue, (id, pulse)):
+            print("displayPulse: Displayed pulse")
+        else:
+            print("displayPulse: Dropped pulse")
 
     def putQueue(self, queue, obj):
         if queue is not None and queue.empty():
@@ -86,7 +104,6 @@ class PulseProcessor:
             return True
 
         return False
-
 
     def process(self):
         '''
@@ -135,10 +152,10 @@ class PulseProcessor:
 
         # set characteristics of reference pulse for convoultion pulse search
         #     unipolar pulse:
-        tauRise = 20E-9       # rise time in (s)
-        tauOn = 12E-9         # hold time in (s)
-        tauFall = 128E-9      # fall time in (s)
-        #pulseHeight = -0.030  # pulse height (V) (SiPM panels)
+        tauRise = 20E-9  # rise time in (s)
+        tauOn = 12E-9  # hold time in (s)
+        tauFall = 128E-9  # fall time in (s)
+        # pulseHeight = -0.030  # pulse height (V) (SiPM panels)
         pulseHeight = -0.035  # pulse height (V) (Kamiokanne)
 
         referencePulse = self.generateReferencePulse(dT, tauRise, tauOn, tauFall, pulseHeight)
@@ -149,7 +166,8 @@ class PulseProcessor:
 
         # calculate thresholds for correlation analysis
         pulseThreshold = np.sum(referencePulse * referencePulse)  # norm of reference pulse
-        zeroNormalizedPulseThreshold = np.sum(zeroNormalizedReferencePulse * zeroNormalizedReferencePulse)  # norm of mean-subtracted reference pulse
+        zeroNormalizedPulseThreshold = np.sum(
+            zeroNormalizedReferencePulse * zeroNormalizedReferencePulse)  # norm of mean-subtracted reference pulse
         if self.verbosity > 1:
             self.bufferManager.prlog('*==* pulse Filter: reference pulse')
             self.bufferManager.prlog(np.array_str(referencePulse))
@@ -176,7 +194,7 @@ class PulseProcessor:
             validated = False
             accepted = False
             doublePulse = False
-            event = self.bufferManager.getEvent(self.consumerId, mode = self.consumerMode)
+            event = self.bufferManager.getEvent(self.consumerId, mode=self.consumerMode)
             if event == None:
                 break
 
@@ -188,20 +206,26 @@ class PulseProcessor:
             # find signal candidates by convoluting signal with reference pulse
             #   data structure to collect properties of selected pulses:
             pulseVoltages = [[0., 0.] for i in range(nChannels)]  # signal height in Volts
-            pulseTimes = [[0., 0.] for i in range(nChannels)]     # time of valid pulse
+            pulseTimes = [[0., 0.] for i in range(nChannels)]  # time of valid pulse
 
             # 1. validate trigger pulse
             if triggerChannel >= 0:
                 offset = max(0, triggerSampleIndex - int(tauRise / dT) - sampleOffset)
-                cort = np.correlate(eventData[triggerChannel, 0:triggerSampleIndex + sampleOffset + referencePulseLength], referencePulse, mode = 'valid')
+                cort = np.correlate(
+                    eventData[triggerChannel, 0:triggerSampleIndex + sampleOffset + referencePulseLength],
+                    referencePulse, mode='valid')
                 cort[cort < pulseThreshold] = pulseThreshold  # set all values below threshold to threshold
                 idtr = np.argmax(cort) + offset  # index of 1st maximum
                 print("idtr: %i offset: %i" % (idtr, offset))
                 if idtr > triggerSampleIndex + (tauRise + tauOn) / dT + sampleOffset:
                     noiseTriggerSignals.append(0.)
-                    print("pulseFilter: Determined noise signal %i: " % (eventNumber))
-                    print(np.array_str(eventData[triggerChannel, 0:triggerSampleIndex + sampleOffset + referencePulseLength]))
-                    self.displayPulse(0, eventData[triggerChannel, 0:triggerSampleIndex + sampleOffset + referencePulseLength])
+#                    print("pulseFilter: Determined noise signal %i: " % (eventNumber))
+#                    print(
+#                        np.array_str(
+#                            eventData[triggerChannel, 0:triggerSampleIndex + sampleOffset + referencePulseLength]))
+                    self.displayPulse(0,
+                                      eventData[triggerChannel,
+                                      0:triggerSampleIndex + sampleOffset + referencePulseLength])
                     continue  # - while # no pulse near trigger, skip rest of event analysis
                 # check pulse shape by requesting match with time-averaged pulse
                 evdt = eventData[triggerChannel, idtr:idtr + referencePulseLength]
@@ -349,17 +373,21 @@ class PulseProcessor:
             if accepted and self.verbosity > 1:
                 if nChannels == 1:
                     self.bufferManager.prlog('*==* pF: %i, %i, %.2f, %.3g, %.3g' \
-                             % (eventCount, singleCoincidenceCount, tevt, pulseVoltages[0][0]))
+                                             % (eventCount, singleCoincidenceCount, tevt, pulseVoltages[0][0]))
                 elif nChannels == 2:
                     self.bufferManager.prlog('*==* pF: %i, %i, i%, %.3g, %.3g, %.3g' \
-                             % (eventCount, validCount, singleCoincidenceCount, tevt, pulseVoltages[0][0], pulseVoltages[1][0]))
+                                             % (
+                                             eventCount, validCount, singleCoincidenceCount, tevt, pulseVoltages[0][0],
+                                             pulseVoltages[1][0]))
                 elif nChannels == 3:
                     self.bufferManager.prlog('*==* pF: %i, %i, %i, %i, %i, %.3g' \
-                             % (eventCount, validCount, singleCoincidenceCount, doubleCoincidenceCount, tripleCoincidenceCount, tevt))
+                                             % (eventCount, validCount, singleCoincidenceCount, doubleCoincidenceCount,
+                                                tripleCoincidenceCount, tevt))
 
             if (self.verbosity and eventCount % 1000 == 0):
                 self.bufferManager.prlog("*==* pF: evt %i, Nval, Nacc, Nacc2, Nacc3: %i, %i, %i, %i" \
-                         % (eventCount, validCount, singleCoincidenceCount, doubleCoincidenceCount, tripleCoincidenceCount))
+                                         % (eventCount, validCount, singleCoincidenceCount, doubleCoincidenceCount,
+                                            tripleCoincidenceCount))
 
             if self.verbosity and doublePulse:
                 s = '%i, %i, %.4g' \
@@ -386,13 +414,15 @@ class PulseProcessor:
             tag = "# pulseFilter Summary: "
             if pulseFilterLog:
                 print(tag + "last evNR %i, Nval, Nacc, Nacc2, Nacc3: %i, %i, %i, %i" \
-                      % (eventCount, validCount, singleCoincidenceCount, doubleCoincidenceCount, tripleCoincidenceCount),
+                      % (
+                      eventCount, validCount, singleCoincidenceCount, doubleCoincidenceCount, tripleCoincidenceCount),
                       file=pulseFilterLog)
                 pulseFilterLog.close()
 
             if doublePulseFilterLog:
                 print(tag + "last evNR %i, Nval, Nacc, Nacc2, Nacc3: %i, %i, %i, %i" \
-                      % (eventCount, validCount, singleCoincidenceCount, doubleCoincidenceCount, tripleCoincidenceCount),
+                      % (
+                      eventCount, validCount, singleCoincidenceCount, doubleCoincidenceCount, tripleCoincidenceCount),
                       file=doublePulseFilterLog)
                 print("#                       %i double pulses" % (doublePulseCount),
                       file=doublePulseFilterLog)
