@@ -5,10 +5,10 @@ import traceback as trace
 from collections import deque
 
 def mpPulseDisplay(Q, conf):
-    '''Oscilloscpe display of data passed via multiprocessing.Queue
+    '''Special Oscilloscpe display of data passed via multiprocessing.Queue by PulseProcessor
       Args:
         conf: picoConfig object
-        Q:    multiprocessing.Queue()   
+        Q:    multiprocessing.Queue()
     '''
     axes=[]
     colors=[]
