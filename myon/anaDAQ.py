@@ -58,7 +58,7 @@ cId_pf = BM.BMregister() # get a Buffer Manager Client Id
 #                      BMclientId  RMeterQ  histQ  fileout verbose    
 
 pulseProcessor = PulseProcessor.PulseProcessor(BM, PSconf, cId_pf, filtRateQ, histQ, VSigQ, PulseQ, True, 2)
-procs.append(mp.Process(name = "pulseProcessor", target = pulseProcessor.process))
+procs.append(mp.Process(name = "pulseProcessor", target = pulseProcessor.run))
 
   # pulse analysis as sub-process
 # procs.append(
