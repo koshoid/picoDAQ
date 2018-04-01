@@ -29,8 +29,9 @@ doc/build/_build
 MANIFEST
 dist
 /build
-filterLogs
-.idea
+/logs
+/pulseLogs
+/.idea
 
 # LaTeX auxiliary files
 doc/latex/*.idx

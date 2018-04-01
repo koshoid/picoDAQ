@@ -25,10 +25,10 @@ class PulseProcessor:
 
         if self.logPulses:
             datetime = time.strftime('%y%m%d-%H%M', time.gmtime())
-            self.pulseFilterLog = open('filterLogs/pFilt_' + datetime + '.dat', 'w')
+            self.pulseFilterLog = open('pulseLogs/pFilt_' + datetime + '.dat', 'w')
             print("# EvNr, EvT, Vs ...., Ts ...T",
                   file=self.pulseFilterLog)  # header line
-            self.doublePulseFilterLog = open('filterLogs/dpFilt_' + datetime + '.dat', 'w', 1)
+            self.doublePulseFilterLog = open('pulseLogs/dpFilt_' + datetime + '.dat', 'w', 1)
             print("# Nacc, Ndble, Tau, delT(iChan), ... V(iChan)",
                   file=self.doublePulseFilterLog)  # header line
 
